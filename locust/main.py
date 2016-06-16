@@ -144,6 +144,15 @@ def parse_options():
         help="The rate per second in which clients are spawned. Only used together with --no-web"
     )
     
+    # ramp feature enabled option
+    parser.add_option(
+        '--ramp',
+        action='store_true',
+        dest='ramp',
+        default=False,
+        help="Enables the auto tuning ramping feature for finding highest stable client count. NOTE having ramp enabled will add some more overhead for additional stats gathering"
+    )
+
     # Number of requests
     parser.add_option(
         '-n', '--num-request',
