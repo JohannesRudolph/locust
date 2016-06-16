@@ -8,7 +8,8 @@ meaning we account for the response times recorded in a moving time window.
 
 """
 
-from stats import RequestStats
+from .stats import global_stats
+
 from runners import locust_runner, DistributedLocustRunner, SLAVE_REPORT_INTERVAL, STATE_HATCHING
 from collections import deque
 import events
@@ -17,7 +18,7 @@ import gevent
 import logging
 
 logger = logging.getLogger(__name__)
-
+stats = global_stats.aggregated_stats()
 response_times = deque([])
 
 # Are we running in distributed mode or not?
@@ -61,7 +62,7 @@ def on_request_success_ramping(request_type, name, response_time, response_lengt
         response_times.append(response_time)
 
         # remove from the queue
-        rps = RequestStats.sum_stats().current_rps
+        rps = stats.current_rps
         if len(response_times) > rps*PERCENTILE_TIME_WINDOW:
             for i in xrange(len(response_times) - int(math.ceil(rps*PERCENTILE_TIME_WINDOW))):
                 response_times.popleft()
@@ -105,7 +106,7 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
                     return ramp_down(clients, hatch_stride)
 
                 gevent.sleep(calibration_time)
-                fail_ratio = RequestStats.sum_stats().fail_ratio
+                fail_ratio = stats.fail_ratio
                 if fail_ratio > acceptable_fail:
                     logger.info("Ramp up halted; Acceptable fail ratio %d%% exceeded with fail ratio %d%%" % (acceptable_fail*100, fail_ratio*100))
                     return ramp_down(clients, hatch_stride)
@@ -131,7 +132,7 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
             if locust_runner.state != STATE_HATCHING:
                 if locust_runner.num_clients < max_locusts:
                     gevent.sleep(calibration_time)
-                    fail_ratio = RequestStats.sum_stats().fail_ratio
+                    fail_ratio = stats.fail_ratio
                     if fail_ratio <= acceptable_fail:
                         p = current_percentile(percent)
                         if p <= response_time_limit:
