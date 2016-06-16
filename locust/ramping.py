@@ -18,6 +18,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 response_times = deque([])
+ramp_index = 0
 
 # Are we running in distributed mode or not?
 is_distributed = isinstance(locust_runner, DistributedLocustRunner)
@@ -96,6 +97,12 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
     
     register_listeners()
     
+    def ramp_wait():
+        global ramp_index 
+        logger.info("Ramp #%d will start, calibration time %d seconds" % (ramp_index, calibration_time))
+        ramp_index += 1
+        gevent.sleep(calibration_time)
+
     def ramp_up(clients, hatch_stride, boundery_found=False):
         while True:
             if locust_runner.state != STATE_HATCHING:
@@ -103,7 +110,7 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
                     logger.info("Ramp up halted; Max locusts limit reached: %d" % max_locusts)
                     return ramp_down(clients, hatch_stride)
 
-                gevent.sleep(calibration_time)
+                ramp_wait()
                 fail_ratio = current_stats().fail_ratio
                 if fail_ratio > acceptable_fail:
                     logger.info("Ramp up halted; Acceptable fail ratio %d%% exceeded with fail ratio %d%%" % (acceptable_fail*100, fail_ratio*100))
@@ -131,7 +138,7 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         while True:
             if locust_runner.state != STATE_HATCHING:
                 if locust_runner.num_clients < max_locusts:
-                    gevent.sleep(calibration_time)
+                    ramp_wait()
                     fail_ratio = current_stats().fail_ratio
                     if fail_ratio <= acceptable_fail:
                         p = current_percentile(percent)
