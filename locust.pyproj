@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{925d4ba3-c3d0-457e-82d5-b6fb1e59c947}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>run.py</StartupFile>
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId>{2af0f10d-7135-4994-9156-5d01c9c11b7e}</InterpreterId>
+    <InterpreterVersion>2.7</InterpreterVersion>
+    <IsWindowsApplication>False</IsWindowsApplication>
+    <CommandLineArguments>-f C:\Users\johannes.rudolph\cfbroker\loadtest\locustfile.py --ramp --host=http://cf-spring-reissuable-quickstep.local.pcfdev.io/</CommandLineArguments>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+    <InterpreterArguments>
+    </InterpreterArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+    <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="docs\images\webui-splash-screenshot.png" />
+    <Content Include="docs\requirements.txt" />
+    <Content Include="locust\static\img\favicon.ico" />
+    <Content Include="locust\static\img\logo.png" />
+    <Content Include="locust\static\img\start_button.png" />
+    <Content Include="locust\static\img\stop.png" />
+    <Content Include="locust\static\img\top_bg.png" />
+    <Content Include="locust\static\jquery-1.4.min.js" />
+    <Content Include="locust\static\jquery.jqote2.min.js" />
+    <Content Include="locust\static\jquery.tools.min.js" />
+    <Content Include="locust\static\locust.js" />
+    <Content Include="locust\static\style.css" />
+    <Content Include="locust\templates\index.html" />
+    <Content Include="tox.ini" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="docs\conf.py" />
+    <Compile Include="examples\basic.py" />
+    <Compile Include="examples\custom_xmlrpc_client\server.py" />
+    <Compile Include="examples\custom_xmlrpc_client\xmlrpc_locustfile.py" />
+    <Compile Include="examples\events.py" />
+    <Compile Include="locust\cache.py" />
+    <Compile Include="locust\clients.py" />
+    <Compile Include="locust\core.py" />
+    <Compile Include="locust\events.py" />
+    <Compile Include="locust\exception.py" />
+    <Compile Include="locust\inspectlocust.py" />
+    <Compile Include="locust\log.py" />
+    <Compile Include="locust\main.py" />
+    <Compile Include="locust\ramping.py" />
+    <Compile Include="locust\rpc\protocol.py" />
+    <Compile Include="locust\rpc\socketrpc.py" />
+    <Compile Include="locust\rpc\zmqrpc.py" />
+    <Compile Include="locust\rpc\__init__.py" />
+    <Compile Include="locust\runners.py" />
+    <Compile Include="locust\stats.py" />
+    <Compile Include="locust\test\testcases.py" />
+    <Compile Include="locust\test\test_client.py" />
+    <Compile Include="locust\test\test_locust_class.py" />
+    <Compile Include="locust\test\test_main.py" />
+    <Compile Include="locust\test\test_runners.py" />
+    <Compile Include="locust\test\test_stats.py" />
+    <Compile Include="locust\test\test_taskratio.py" />
+    <Compile Include="locust\test\test_web.py" />
+    <Compile Include="locust\test\__init__.py" />
+    <Compile Include="locust\web.py" />
+    <Compile Include="locust\__init__.py" />
+    <Compile Include="run.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="setup.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="docs" />
+    <Folder Include="docs\images" />
+    <Folder Include="examples" />
+    <Folder Include="examples\custom_xmlrpc_client" />
+    <Folder Include="locust" />
+    <Folder Include="locust\rpc" />
+    <Folder Include="locust\static" />
+    <Folder Include="locust\static\img" />
+    <Folder Include="locust\templates" />
+    <Folder Include="locust\test" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="{2af0f10d-7135-4994-9156-5d01c9c11b7e}\2.7" />
+  </ItemGroup>
+  <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
+</Project>
