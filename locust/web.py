@@ -73,6 +73,7 @@ def ramp():
     fail_rate = float(int(request.form["fail_rate"]) / 100.0)
     calibration_time = int(request.form["wait_time"])
     
+    # ramping acts as a "controller" for locust and runs on its own thread
     gevent.spawn(start_ramping, hatch_rate, max_clients, hatch_stride, percentile, response_time, fail_rate, precision, init_clients, calibration_time)
 
     response = make_response(json.dumps({'success':True, 'message': 'Ramping started'}))
