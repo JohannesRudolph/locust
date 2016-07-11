@@ -45,6 +45,7 @@ setup(
     entry_points={
         'console_scripts': [
             'locust = locust.main:main',
+            'locustctl = locustctl.main:main'
         ]
     },
 )

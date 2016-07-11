@@ -1,2 +1,2 @@
-from locust import main
+from locustctl import main
 main.main()
