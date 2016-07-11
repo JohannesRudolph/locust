@@ -67,6 +67,7 @@ def boot():
 def stop():
     if (locust_process != None):
         locust_process.kill()
+        locust_process = None
 
     return Response(json.dumps({'message': "Locust has stopped"}), status=200, mimetype='application/json')
 
