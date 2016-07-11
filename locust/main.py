@@ -142,16 +142,7 @@ def parse_options():
         dest='hatch_rate',
         default=1,
         help="The rate per second in which clients are spawned. Only used together with --no-web"
-    )
-    
-    # ramp feature enabled option
-    parser.add_option(
-        '--ramp',
-        action='store_true',
-        dest='ramp',
-        default=False,
-        help="Enables the auto tuning ramping feature for finding highest stable client count. NOTE having ramp enabled will add some more overhead for additional stats gathering"
-    )
+    ) 
 
     # Number of requests
     parser.add_option(
@@ -252,7 +243,6 @@ def _is_package(path):
         and os.path.exists(os.path.join(path, '__init__.py'))
     )
 
-
 def find_locustfile(locustfile):
     """
     Attempt to locate a locustfile, either explicitly or by searching parent dirs.
@@ -284,7 +274,6 @@ def find_locustfile(locustfile):
             path = os.path.join('..', path)
     # Implicit 'return None' if nothing was found
 
-
 def is_locust(tup):
     """
     Takes (name, object) tuple, returns True if it's a public Locust subclass.
@@ -297,7 +286,6 @@ def is_locust(tup):
         and getattr(item, "task_set")
         and not name.startswith('_')
     )
-
 
 def load_locustfile(path):
     """
