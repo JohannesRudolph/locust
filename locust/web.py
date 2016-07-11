@@ -44,8 +44,7 @@ def index():
         slave_count=slave_count,
         user_count=runners.locust_runner.user_count,
         ramp = _ramp,
-        version=version
-    )
+        version=version)
 
 @app.route('/swarm', methods=["POST"])
 def swarm():
@@ -57,7 +56,6 @@ def swarm():
     response = make_response(json.dumps({'success':True, 'message': 'Swarming started'}))
     response.headers["Content-type"] = "application/json"
     return response
-
 
 @app.route("/ramp", methods=["POST"])
 def ramp():
@@ -80,6 +78,12 @@ def ramp():
     response.headers["Content-type"] = "application/json"
     return response
 
+@app.route('/state')
+def state():
+    response = make_response(json.dumps({'state': runners.locust_runner.state}))
+    response.headers["Content-type"] = "application/json"
+    return response
+
 @app.route('/stop')
 def stop():
     runners.locust_runner.stop()
@@ -94,9 +98,7 @@ def reset_stats():
     
 @app.route("/stats/requests/csv")
 def request_stats_csv():
-    rows = [
-        ",".join([
-            '"Method"',
+    rows = [",".join(['"Method"',
             '"Name"',
             '"# requests"',
             '"# failures"',
@@ -105,13 +107,10 @@ def request_stats_csv():
             '"Min response time"', 
             '"Max response time"',
             '"Average Content Size"',
-            '"Requests/s"',
-        ])
-    ]
+            '"Requests/s"',])]
     
     for s in chain(_sort_stats(runners.locust_runner.request_stats), [runners.locust_runner.stats.aggregated_stats("Total", full_request_history=True)]):
-        rows.append('"%s","%s",%i,%i,%i,%i,%i,%i,%i,%.2f' % (
-            s.method,
+        rows.append('"%s","%s",%i,%i,%i,%i,%i,%i,%i,%.2f' % (s.method,
             s.name,
             s.num_requests,
             s.num_failures,
@@ -120,8 +119,7 @@ def request_stats_csv():
             s.min_response_time or 0,
             s.max_response_time,
             s.avg_content_length,
-            s.total_rps,
-        ))
+            s.total_rps,))
 
     response = make_response("\n".join(rows))
     file_name = "requests_{0}.csv".format(time())
@@ -132,8 +130,7 @@ def request_stats_csv():
 
 @app.route("/stats/distribution/csv")
 def distribution_stats_csv():
-    rows = [",".join((
-        '"Name"',
+    rows = [",".join(('"Name"',
         '"# requests"',
         '"50%"',
         '"66%"',
@@ -143,8 +140,7 @@ def distribution_stats_csv():
         '"95%"',
         '"98%"',
         '"99%"',
-        '"100%"',
-    ))]
+        '"100%"',))]
     for s in chain(_sort_stats(runners.locust_runner.request_stats), [runners.locust_runner.stats.aggregated_stats("Total", full_request_history=True)]):
         if s.num_requests:
             rows.append(s.percentile(tpl='"%s",%i,%i,%i,%i,%i,%i,%i,%i,%i,%i'))
@@ -178,19 +174,22 @@ def request_stats():
     
     report = {"stats":stats, "errors":[e.to_dict() for e in six.itervalues(runners.locust_runner.errors)]}
     if stats:
-        report["total_rps"] = stats[len(stats)-1]["current_rps"]
+        report["total_rps"] = stats[len(stats) - 1]["current_rps"]
         report["fail_ratio"] = runners.locust_runner.stats.aggregated_stats("Total").fail_ratio
         
-        # since generating a total response times dict with all response times from all
-        # urls is slow, we make a new total response time dict which will consist of one
-        # entry per url with the median response time as key and the number of requests as
+        # since generating a total response times dict with all response times
+        # from all
+        # urls is slow, we make a new total response time dict which will
+        # consist of one
+        # entry per url with the median response time as key and the number of
+        # requests as
         # value
         response_times = defaultdict(int) # used for calculating total median
-        for i in xrange(len(stats)-1):
+        for i in xrange(len(stats) - 1):
             response_times[stats[i]["median_response_time"]] += stats[i]["num_requests"]
         
         # calculate total median
-        stats[len(stats)-1]["median_response_time"] = median_from_dict(stats[len(stats)-1]["num_requests"], response_times)
+        stats[len(stats) - 1]["median_response_time"] = median_from_dict(stats[len(stats) - 1]["num_requests"], response_times)
     
     is_distributed = isinstance(runners.locust_runner, MasterLocustRunner)
     if is_distributed:
