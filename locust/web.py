@@ -28,7 +28,6 @@ app = Flask(__name__)
 app.debug = True
 app.root_path = os.path.dirname(os.path.abspath(__file__))
 
-_ramp = False
 
 @app.route('/')
 def index():
@@ -43,7 +42,7 @@ def index():
         is_distributed=is_distributed,
         slave_count=slave_count,
         user_count=runners.locust_runner.user_count,
-        ramp = _ramp,
+        ramp = True,
         version=version)
 
 @app.route('/swarm', methods=["POST"])
@@ -223,8 +222,6 @@ def exceptions_csv():
     return response
 
 def start(locust, options):
-    global _ramp
-    _ramp = options.ramp
     wsgi.WSGIServer((options.web_host, options.port), app, log=None).serve_forever()
 
 def _sort_stats(stats):
