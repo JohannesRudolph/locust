@@ -13,3 +13,6 @@ dist/**
 build/
 .coverage
 .tox/
+*.user
+.vs/
+TestResults/
