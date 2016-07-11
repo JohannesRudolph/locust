@@ -2,16 +2,15 @@
 
 import csv
 import json
-import os.path
+import os.path, sys
 
-from gevent import wsgi
+from gevent import wsgi, subprocess
 from flask import Flask, Response, request
 from locust import __version__ as version
 
 import gevent
 import logging
 import shlex
-import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +23,13 @@ if not os.path.exists('uploads'):
     os.makedirs('uploads')
 
 locust_process = None
+locust_process_poll = None
 locust_args = ""
 
 @app.route('/boot', methods=["POST"])
 def boot():
     global locust_process # we need write access to this variable
+    global locust_process_poll
 
     if (locust_process != None):
         return Response(json.dumps({'message': "Locust already running"}), status=400, mimetype='application/json')
@@ -59,17 +60,37 @@ def boot():
     args.extend(["-f", locustfile])
     args.extend(["--host", host])
 
-    locust_process = subprocess.Popen(args, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    locust_process = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=os.getcwd())
+    # start a greenlet to read stdout from process
+    def poll():
+        while True:
+            s = locust_process.stdout.readline()
+            if s == "": # EOF, process exited
+                break
+            else:
+                logger.info(s.strip())
 
-    return Response(json.dumps({'message': "Locust started"}), status=200, mimetype='application/json')
+    locust_process_poll = gevent.spawn(poll)
+     
+    return Response(json.dumps({'message': "Locust started"}), status = 200, mimetype = 'application/json')
 
 @app.route('/kill', methods=["POST"])
 def stop():
     global locust_process # we need write access to this variable
-    
+    global locust_process_poll
+
     if (locust_process != None):
-        locust_process.kill()
-        locust_process = None
+        logger.info("killing locust process");
+        try:
+            locust_process.kill()
+            locust_process_poll.kill()
+            logger.info("locust process killed");
+        except:
+             print "Unexpected error killing locust:", sys.exc_info()[0]
+             pass
+        finally:
+            locust_process = None
+            locust_process_poll = None
 
     return Response(json.dumps({'message': "Locust has stopped"}), status=200, mimetype='application/json')
 
