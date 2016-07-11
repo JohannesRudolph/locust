@@ -65,6 +65,8 @@ def boot():
 
 @app.route('/kill', methods=["POST"])
 def stop():
+    global locust_process # we need write access to this variable
+    
     if (locust_process != None):
         locust_process.kill()
         locust_process = None
