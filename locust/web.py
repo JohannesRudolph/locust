@@ -29,7 +29,7 @@ app.debug = True
 app.root_path = os.path.dirname(os.path.abspath(__file__))
 
 def is_running():
-    return runners.locust_runner.state != runners.STATE_INIT or runners.locust_runner.state != runners.STATE_STOPPED
+    return runners.locust_runner.state == runners.STATE_RUNNING or runners.locust_runner.state == runners.STATE_HATCHING
 
 def make_already_running_response():
     response = make_response(json.dumps({'success':False, 'message': 'Runner already executing a test, please stop it first'}))
