@@ -19,10 +19,14 @@ import gevent
 import logging
 
 logger = logging.getLogger(__name__) 
+
+# we use statsd for logging for external reporint instead of locusts internal metrics
+# internal metrics are used for ramping decisions though
 statsd = StatsClient(host=os.environ.get('STATSD_HOST', "192.168.99.100"), 
                 port=os.environ.get('STATSD_PORT', "8125"), 
                 prefix=os.environ.get('STATSD_PREFIX', "locust"))
 
+statsd_tags = os.environ.get('STATSD_TAGS', "testId=test")
 response_times = deque([])
 ramp_index = 0
 
@@ -69,7 +73,7 @@ def current_stats():
 
 def on_request_success_ramping(request_type, name, response_time, response_length):
     #statsd.incr("locust.requests");
-    statsd.timing("requests,type=" + request_type + ",name=" + "root", response_time)
+    statsd.timing("requests," + statsd_tags + ",type=" + request_type + ",name=" + name, response_time)
 
     response_times.append(response_time)
        

@@ -28,6 +28,13 @@ app = Flask(__name__)
 app.debug = True
 app.root_path = os.path.dirname(os.path.abspath(__file__))
 
+def is_running():
+    return runners.locust_runner.state != runners.STATE_INIT or runners.locust_runner.state != runners.STATE_STOPPED
+
+def make_already_running_response():
+    response = make_response(json.dumps({'success':False, 'message': 'Runner already executing a test, please stop it first'}))
+    response.headers["Content-type"] = "application/json"
+    return response
 
 @app.route('/')
 def index():
@@ -47,7 +54,8 @@ def index():
 
 @app.route('/swarm', methods=["POST"])
 def swarm():
-    assert request.method == "POST"
+    if (is_running()):
+        return make_already_running_response()
 
     locust_count = int(request.form["locust_count"])
     hatch_rate = float(request.form["hatch_rate"])
@@ -60,6 +68,9 @@ def swarm():
 def ramp():
     from ramping import start_ramping
     
+    if (is_running()):
+        return make_already_running_response()
+
     init_clients = int(request.form["init_count"])
     hatch_rate = int(request.form["hatch_rate"])
     hatch_stride = int(request.form["hatch_stride"])

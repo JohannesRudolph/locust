@@ -2,7 +2,9 @@
 
 import csv
 import json
-import os.path, sys
+import os
+import os.path
+import sys
 
 from gevent import wsgi, subprocess
 from flask import Flask, Response, request
@@ -44,6 +46,10 @@ def boot():
     if (not host):
         return Response(json.dumps({'message': "Request did not contain a target host"}), status=400, mimetype='application/json')
 
+    tags = request.form["tags"]
+    if (not tags):
+        return Response(json.dumps({'message': "Request did not contain a tag"}), status=400, mimetype='application/json')
+
     file = request.files[filename]
     locustfile = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     
@@ -60,7 +66,10 @@ def boot():
     args.extend(["-f", locustfile])
     args.extend(["--host", host])
 
-    locust_process = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=os.getcwd())
+    locust_env = os.environ.copy()
+    locust_env["STATSD_TAGS"] = tags
+
+    locust_process = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=os.getcwd(), env=locust_env)
     # start a greenlet to read stdout from process
     def poll():
         while True:
@@ -80,11 +89,11 @@ def stop():
     global locust_process_poll
 
     if (locust_process != None):
-        logger.info("killing locust process");
+        logger.info("killing locust process")
         try:
             locust_process.kill()
             locust_process_poll.kill()
-            logger.info("locust process killed");
+            logger.info("locust process killed")
         except:
              print "Unexpected error killing locust:", sys.exc_info()[0]
              pass
