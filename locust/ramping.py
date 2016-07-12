@@ -153,7 +153,7 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         logger.info("Ramp #%d will start with %d locusts, calibration time %d seconds." % (ramp_index, clients, calibration_time))
         logger.info("Current stride is %d and bounds are [%s, %s]" % (stride, str(lower_bound), str(upper_bound)))
         ramp_set_locusts(clients)
-        ramp_execute(clients)
+        ramp_execute()
 
         step_failed = ramp_check_failed()
         
