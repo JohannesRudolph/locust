@@ -105,12 +105,10 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
     
     register_listeners()
     
-    def ramp_execute(clients):
+    def ramp_execute():
         """execute a ramp stage"""
         global ramp_index 
         ramp_index += 1
-        logger.info("Ramp #%d will start with %d locusts, calibration time %d seconds" % (ramp_index, clients, calibration_time))
-        
         statsd.gauge("ramp," + statsd_tags, ramp_index)
 
         reset()
@@ -122,62 +120,85 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         statsd.gauge("ramp," + statsd_tags, 0)
         return remove_listeners()
 
-    def ramp_success():
-        logger.info("Sweet spot found! Ramping stopped at %i locusts" % (locust_runner.num_clients))    
+    def ramp_success(result):
+        logger.info("Sweet spot found! Ramping stopped at %i locusts" % (result))    
         ramp_stop()
         
     def ramp_set_locusts(clients):
-        if (clients < 0):
-            logger.warning("No responses met the ramping thresholds, check your ramp configuration, locustfile and \"--host\" address")
-            return False
-
-        if (clients > max_locusts):
-            logger.info("Max locusts limit reached: %d" % max_locusts)
-            return False   
-        
         locust_runner.start_hatching(clients, locust_runner.hatch_rate)
         statsd.gauge("locusts," + statsd_tags , clients)
-        return True
-
-    def test(clients, hatch_stride, boundary_found):
-        if (not ramp_set_locusts(clients)):
-            ramp_stop()
-
+        
         # wait for hatching to complete
         while locust_runner.state == STATE_HATCHING:
             gevent.sleep(1)
-        
-        ramp_execute(clients)
 
-        # we're currently ramping up
-        ramp_failed = False
-        
+    def ramp_check_failed():
         fail_ratio = current_stats().fail_ratio            
         if fail_ratio > acceptable_fail:
             logger.info("Ramp failed; Acceptable fail ratio %d%% exceeded with fail ratio %d%%" % (acceptable_fail * 100, fail_ratio * 100))
-            ramp_failed = True 
+            return True
                     
         p = current_percentile(percent)
         if p >= response_time_limit:
             logger.info("Ramp failed; Percentile response times getting high: %d" % p)
-            ramp_failed = True
+            return True
+        
+        # ramp passed
+        return False
 
-        if ramp_failed:
-            # half the hatch_stride and move down (binary search), ensure we
-            # never move smaller than precision
-            hatch_stride = max((hatch_stride / 2), precision)
-            boundary_found = True
-            logger.info("Ramping down")
-            return test(clients - hatch_stride, hatch_stride, boundary_found)
+    # implements a binary search for optimum number of clients
+    # will exponentially increase clients each step until the first step fails, then start binary search until within target precision
+    def test(clients, stride, lower_bound, upper_bound):
+        logger.info("Ramp #%d will start with %d locusts, calibration time %d seconds. Current stride is %d and upper bound %d" % (ramp_index, clients, calibration_time, stride, upper_bound))
 
-        if (boundary_found and (hatch_stride <= precision)):
-            # ramp did not fail, but current hatch_stride is smaller than
-            # precision so no need to test further
-            return ramp_success()
+        ramp_set_locusts(clients)
+        ramp_execute(clients)
+
+        step_failed = ramp_check_failed()
+        
+        # update bounds
+        if step_failed:
+            upper_bound = clients
+            # if necessary, resets the stride to the start stride (due to slow start)
+            stride = min(stride, hatch_stride)
+        else:
+            lower_bound = clients
+
+        
+        if (upper_bound == None):
+            # like TCP slow start, our goal ist to quickly find an upper boundary so we increase our stride exponentially
+            stride = stride * 2
+        # we have an upper bound, adjust stride to use binary search (either up or down)
+        else:
+            # stop searching if we're within precision already
+            if ((upper_bound - lower_bound) <= precision):
+                ramp_success(lower_bound)
+                return True
+            
+            # half the stride
+            stride = (stride / 2)
+       
     
-        # continue ramping up with the same hatch_stride
-        logger.info("Ramping up")
-        return test(min(clients + hatch_stride, max_locusts) , hatch_stride, boundary_found)
+        if step_failed:
+            logger.info("Ramping down")
+            clients = clients - stride
+            if (clients <= start_count):
+                logger.warning("Host can't support minimum number of users, check your ramp configuration, locustfile and \"--host\" address")
+                ramp_stop()
+                return False
+
+            return test(clients, stride, lower_bound, upper_bound)
+        else:
+            # if we just tested maximum number of locusts, don't go further
+            if (clients == max_locusts):
+                logger.warning("Max locusts limit reached: %d" % max_locusts)
+                ramp_stop() 
+                return False
+            
+            # todo: maybe we should use multiplicative increase (like TCP slow start) until we find our first upper bound
+            logger.info("Ramping up")
+            clients = min(clients + stride, max_locusts)
+            return test(clients , stride, lower_bound, upper_bound)
                 
     if hatch_rate:
         locust_runner.hatch_rate = hatch_rate
@@ -185,4 +206,4 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         locust_runner.start_hatching(start_count, hatch_rate)
     
     logger.info("RAMPING STARTED")
-    test(start_count, hatch_stride, False)
+    good_result = test(start_count, hatch_stride, 0, None)
