@@ -160,9 +160,6 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         # update bounds
         if step_failed:
             upper_bound = clients
-            # if necessary, resets the stride to the start stride (due to slow
-            # start)
-            stride = min(stride, hatch_stride)
         else:
             lower_bound = clients
 
