@@ -147,10 +147,11 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         return False
 
     # implements a binary search for optimum number of clients
-    # will exponentially increase clients each step until the first step fails, then start binary search until within target precision
+    # will exponentially increase clients each step until the first step fails,
+    # then start binary search until within target precision
     def test(clients, stride, lower_bound, upper_bound):
-        logger.info("Ramp #%d will start with %d locusts, calibration time %d seconds. Current stride is %d and upper bound %d" % (ramp_index, clients, calibration_time, stride, upper_bound))
-
+        logger.info("Ramp #%d will start with %d locusts, calibration time %d seconds." % (ramp_index, clients, calibration_time))
+        logger.info("Current stride is %d and bounds are [%s, %s]" % (stride, str(lower_bound), str(upper_bound)))
         ramp_set_locusts(clients)
         ramp_execute(clients)
 
@@ -159,16 +160,19 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         # update bounds
         if step_failed:
             upper_bound = clients
-            # if necessary, resets the stride to the start stride (due to slow start)
+            # if necessary, resets the stride to the start stride (due to slow
+            # start)
             stride = min(stride, hatch_stride)
         else:
             lower_bound = clients
 
         
         if (upper_bound == None):
-            # like TCP slow start, our goal ist to quickly find an upper boundary so we increase our stride exponentially
+            # like TCP slow start, our goal ist to quickly find an upper
+            # boundary so we increase our stride exponentially
             stride = stride * 2
-        # we have an upper bound, adjust stride to use binary search (either up or down)
+        # we have an upper bound, adjust stride to use binary search (either up
+        # or down)
         else:
             # stop searching if we're within precision already
             if ((upper_bound - lower_bound) <= precision):
@@ -195,7 +199,8 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
                 ramp_stop() 
                 return False
             
-            # todo: maybe we should use multiplicative increase (like TCP slow start) until we find our first upper bound
+            # todo: maybe we should use multiplicative increase (like TCP slow
+            # start) until we find our first upper bound
             logger.info("Ramping up")
             clients = min(clients + stride, max_locusts)
             return test(clients , stride, lower_bound, upper_bound)
