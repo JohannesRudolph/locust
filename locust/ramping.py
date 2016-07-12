@@ -20,7 +20,8 @@ import logging
 
 logger = logging.getLogger(__name__) 
 
-# we use statsd for logging for external reporint instead of locusts internal metrics
+# we use statsd for logging for external reporint instead of locusts internal
+# metrics
 # internal metrics are used for ramping decisions though
 statsd = StatsClient(host=os.environ.get('STATSD_HOST', "192.168.99.100"), 
                 port=os.environ.get('STATSD_PORT', "8125"), 
@@ -110,7 +111,7 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         ramp_index += 1
         logger.info("Ramp #%d will start with %d locusts, calibration time %d seconds" % (ramp_index, clients, calibration_time))
         
-        statsd.gauge("ramp", ramp_index)
+        statsd.gauge("ramp," + statsd_tags, ramp_index)
 
         reset()
         gevent.sleep(calibration_time)
@@ -118,7 +119,7 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
     def ramp_stop():
         logger.info("RAMING STOPPED")
         locust_runner.stop()
-        statsd.gauge("ramp", 0)
+        statsd.gauge("ramp," + statsd_tags, 0)
         return remove_listeners()
 
     def ramp_success():
@@ -135,7 +136,7 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
             return False   
         
         locust_runner.start_hatching(clients, locust_runner.hatch_rate)
-        statsd.gauge("locusts", clients)
+        statsd.gauge("locusts," + statsd_tags , clients)
         return True
 
     def test(clients, hatch_stride, boundary_found):
@@ -162,19 +163,21 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
             ramp_failed = True
 
         if ramp_failed:
-            # half the hatch_stride and move down (binary search), ensure we never move smaller than precision
+            # half the hatch_stride and move down (binary search), ensure we
+            # never move smaller than precision
             hatch_stride = max((hatch_stride / 2), precision)
             boundary_found = True
             logger.info("Ramping down")
-            return test(clients-hatch_stride, hatch_stride, boundary_found)
+            return test(clients - hatch_stride, hatch_stride, boundary_found)
 
         if (boundary_found and (hatch_stride <= precision)):
-            # ramp did not fail, but current hatch_stride is smaller than precision so no need to test further
+            # ramp did not fail, but current hatch_stride is smaller than
+            # precision so no need to test further
             return ramp_success()
     
         # continue ramping up with the same hatch_stride
         logger.info("Ramping up")
-        return test(min(clients+hatch_stride, max_locusts) , hatch_stride, boundary_found)
+        return test(min(clients + hatch_stride, max_locusts) , hatch_stride, boundary_found)
                 
     if hatch_rate:
         locust_runner.hatch_rate = hatch_rate
