@@ -61,6 +61,11 @@ def boot():
 
     file.save(locustfile)
     
+    # form fields are decoded as unicode, but shell only accepts ANSI
+    # They shouldn't use any utf-8 characters anway, so we just coerce them.
+    tags = str(tags)
+    host = str(host)
+
     args = ["locust"]
     args.extend(shlex.split(locust_args))
     args.extend(["-f", locustfile])
@@ -104,5 +109,6 @@ def stop():
     return Response(json.dumps({'message': "Locust has stopped"}), status=200, mimetype='application/json')
 
 def start(options):
+    global locust_args
     locust_args = options.locust_args
     wsgi.WSGIServer((options.web_host, options.port), app, log=None).serve_forever()
