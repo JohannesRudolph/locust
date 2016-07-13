@@ -1,5 +1,6 @@
 # coding=UTF-8
 import socket
+import sys
 import traceback
 import warnings
 import random
@@ -407,6 +408,8 @@ class SlaveLocustRunner(DistributedLocustRunner):
             try:
                 self.client.send(Message("stats", data, self.client_id))
             except:
+                print "Unexpected error:"
+                print traceback.format_exc()
                 logger.error("Connection lost to master server. Aborting...")
                 break
             

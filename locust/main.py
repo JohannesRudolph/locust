@@ -233,7 +233,6 @@ def parse_options():
     opts, args = parser.parse_args()
     return parser, opts, args
 
-
 def _is_package(path):
     """
     Is the given path a Python package?
@@ -393,7 +392,7 @@ def main():
         # spawn web greenlet
         logger.info("Starting web monitor at %s:%s" % (options.web_host or "*", options.port))
         main_greenlet = gevent.spawn(web.start, locust_classes, options)
-    
+
     if not options.master and not options.slave:
         runners.locust_runner = LocalLocustRunner(locust_classes, options)
         # spawn client spawning/hatching greenlet

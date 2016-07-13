@@ -30,15 +30,12 @@ statsd = StatsClient(host=os.environ.get('STATSD_HOST', "192.168.99.100"),
                 prefix=os.environ.get('STATSD_PREFIX', "locust"))
 
 statsd_tags = os.environ.get('STATSD_TAGS', "testId=test")
-response_times = deque([])
+response_times = list()
 
 # global result variables
 ramp_index = 0
 ramp_result = None
 ramp_error = ""
-
-# Are we running in distributed mode or not?
-is_distributed = isinstance(runners.locust_runner, runners.DistributedLocustRunner)
 
 def percentile(N, percent, key=lambda x:x):
     """
@@ -62,18 +59,13 @@ def percentile(N, percent, key=lambda x:x):
     return d0 + d1
 
 def current_percentile(percent):
-    if is_distributed:
-        # Flatten out the deque of lists and calculate the percentile to be
-        # returned
-        return percentile(sorted([item for sublist in response_times for item in sublist]), percent)
-    else:
-        p = percentile(sorted(response_times), percent)
-        logger.info("current {0:.2f}% percentile of response times: {1:.1f}".format(percent, p))
-        return p
+    p = percentile(sorted(response_times), percent)
+    logger.info("current {0:.2f}% percentile of response times: {1:.1f}".format(percent, p))
+    return p
 
 def reset_responses():
     global response_times 
-    response_times = deque([])
+    response_times = list()
 
 def reset_results(): 
     global ramp_index
@@ -90,7 +82,6 @@ def current_stats():
 def on_request_success_ramping(request_type, name, response_time, response_length):
     #statsd.incr("locust.requests");
     statsd.timing("requests," + statsd_tags + ",type=" + request_type + ",name=" + name, response_time)
-
     response_times.append(response_time)
        
 def on_report_to_master_ramping(client_id, data):
@@ -100,25 +91,19 @@ def on_report_to_master_ramping(client_id, data):
     reset_responses() 
 
 def on_slave_report_ramping(client_id, data):
-    # append all reported response timings
+    # add all reported response timings
     if "current_responses" in data:
-        response_times.append(data["current_responses"])
+        response_times.extend(data["current_responses"])
 
 def register_listeners():
     events.report_to_master += on_report_to_master_ramping
     events.slave_report += on_slave_report_ramping
     events.request_success += on_request_success_ramping
     
-def remove_listeners():
-    events.report_to_master -= on_report_to_master_ramping
-    events.slave_report -= on_slave_report_ramping
-    events.request_success -= on_request_success_ramping
-
 def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
           percent=0.95, response_time_limit=2000, acceptable_fail=0.05,
           precision=200, start_count=0, calibration_time=15):
     
-    register_listeners()
     reset_results()
 
     def ramp_execute():
@@ -140,7 +125,6 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         runners.locust_runner.stop()
         statsd.gauge("locusts," + statsd_tags , 0)
         statsd.gauge("ramp," + statsd_tags, 0)
-        return remove_listeners()
 
     def ramp_success(result):
         global ramp_result
@@ -226,3 +210,5 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
     
     logger.info("RAMPING STARTED")
     test(start_count, hatch_stride, 0, None)
+
+register_listeners()
