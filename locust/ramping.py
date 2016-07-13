@@ -8,7 +8,9 @@ meaning we account for the response times recorded in a moving time window.
 
 """
 
-from runners import locust_runner, DistributedLocustRunner, SLAVE_REPORT_INTERVAL, STATE_HATCHING
+from . import runners 
+
+#runners.locust_runner, runners.DistributedLocustRunner, runners.SLAVE_REPORT_INTERVAL, runners.STATE_HATCHING
 from collections import deque
 from statsd import StatsClient
 
@@ -36,7 +38,7 @@ ramp_result = None
 ramp_error = ""
 
 # Are we running in distributed mode or not?
-is_distributed = isinstance(locust_runner, DistributedLocustRunner)
+is_distributed = isinstance(runners.locust_runner, runners.DistributedLocustRunner)
 
 def percentile(N, percent, key=lambda x:x):
     """
@@ -83,7 +85,7 @@ def reset_results():
     ramp_error = ""
 
 def current_stats():
-    return locust_runner.stats.aggregated_stats("Total")
+    return runners.locust_runner.stats.aggregated_stats("Total")
 
 def on_request_success_ramping(request_type, name, response_time, response_length):
     #statsd.incr("locust.requests");
@@ -135,7 +137,7 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
             ramp_error = error
 
         logger.info("RAMING STOPPED")
-        locust_runner.stop()
+        runners.locust_runner.stop()
         statsd.gauge("locusts," + statsd_tags , 0)
         statsd.gauge("ramp," + statsd_tags, 0)
         return remove_listeners()
@@ -148,11 +150,11 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         ramp_stop()
         
     def ramp_set_locusts(clients):
-        locust_runner.start_hatching(clients, locust_runner.hatch_rate)
+        runners.locust_runner.start_hatching(clients, runners.locust_runner.hatch_rate)
         statsd.gauge("locusts," + statsd_tags , clients)
         
         # wait for hatching to complete
-        while locust_runner.state == STATE_HATCHING:
+        while runners.locust_runner.state == runners.STATE_HATCHING:
             gevent.sleep(1)
 
     def ramp_check_failed():
@@ -218,9 +220,9 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
             return test(clients , stride, lower_bound, upper_bound)
                 
     if hatch_rate:
-        locust_runner.hatch_rate = hatch_rate
+        runners.locust_runner.hatch_rate = hatch_rate
     if start_count > 0:
-        locust_runner.start_hatching(start_count, hatch_rate)
+        runners.locust_runner.start_hatching(start_count, hatch_rate)
     
     logger.info("RAMPING STARTED")
     test(start_count, hatch_stride, 0, None)
