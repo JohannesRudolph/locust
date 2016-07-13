@@ -29,7 +29,11 @@ statsd = StatsClient(host=os.environ.get('STATSD_HOST', "192.168.99.100"),
 
 statsd_tags = os.environ.get('STATSD_TAGS', "testId=test")
 response_times = deque([])
+
+# global result variables
 ramp_index = 0
+ramp_result = None
+ramp_error = ""
 
 # Are we running in distributed mode or not?
 is_distributed = isinstance(locust_runner, DistributedLocustRunner)
@@ -65,9 +69,18 @@ def current_percentile(percent):
         logger.info("current {0:.2f}% percentile of response times: {1:.1f}".format(percent, p))
         return p
 
-def reset():
+def reset_responses():
     global response_times 
     response_times = deque([])
+
+def reset_results(): 
+    global ramp_index
+    global ramp_result
+    global ramp_error
+
+    ramp_index = 0
+    ramp_result = None
+    ramp_error = ""
 
 def current_stats():
     return locust_runner.stats.aggregated_stats("Total")
@@ -82,7 +95,7 @@ def on_report_to_master_ramping(client_id, data):
     # report all response timings to master
     global response_times
     data["current_responses"] = response_times
-    reset() 
+    reset_responses() 
 
 def on_slave_report_ramping(client_id, data):
     # append all reported response timings
@@ -104,17 +117,23 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
           precision=200, start_count=0, calibration_time=15):
     
     register_listeners()
-    
+    reset_results()
+
     def ramp_execute():
         """execute a ramp stage"""
         global ramp_index 
         ramp_index += 1
         statsd.gauge("ramp," + statsd_tags, ramp_index)
 
-        reset()
+        reset_responses()
         gevent.sleep(calibration_time)
 
-    def ramp_stop():
+    def ramp_stop(error=None):
+        global ramp_error
+        if (error != None):
+            logger.warn(error)
+            ramp_error = error
+
         logger.info("RAMING STOPPED")
         locust_runner.stop()
         statsd.gauge("locusts," + statsd_tags , 0)
@@ -122,7 +141,10 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         return remove_listeners()
 
     def ramp_success(result):
+        global ramp_result
+
         logger.info("Sweet spot found! Ramping stopped at %i locusts" % (result))    
+        ramp_result = result
         ramp_stop()
         
     def ramp_set_locusts(clients):
@@ -141,7 +163,7 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
                     
         p = current_percentile(percent)
         if p >= response_time_limit:
-            logger.info("Ramp failed; Percentile response times getting high: %d" % p)
+            logger.info("Ramp failed; Acceptable %.1f%% response time of %dms exceeded with %dms" % (percent * 100, response_time_limit, p))
             return True
         
         # ramp passed
@@ -164,7 +186,6 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         else:
             lower_bound = clients
 
-        
         if (upper_bound == None):
             # like TCP slow start, our goal ist to quickly find an upper
             # boundary so we increase our stride exponentially
@@ -174,8 +195,7 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         else:
             # stop searching if we're within precision already
             if ((upper_bound - lower_bound) <= precision):
-                ramp_success(lower_bound)
-                return True
+                return ramp_success(lower_bound)
             
             # half the stride
             stride = (stride / 2)
@@ -185,20 +205,14 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
             logger.info("Ramping down")
             clients = clients - stride
             if (clients <= start_count):
-                logger.warning("Host can't support minimum number of users, check your ramp configuration, locustfile and \"--host\" address")
-                ramp_stop()
-                return False
+                return ramp_stop("Host can't support minimum number of users, check your ramp configuration, locustfile and \"--host\" address")
 
             return test(clients, stride, lower_bound, upper_bound)
         else:
             # if we just tested maximum number of locusts, don't go further
             if (clients == max_locusts):
-                logger.warning("Max locusts limit reached: %d" % max_locusts)
-                ramp_stop() 
-                return False
+                return ramp_stop("Max locusts limit reached: %d" % max_locusts) 
             
-            # todo: maybe we should use multiplicative increase (like TCP slow
-            # start) until we find our first upper bound
             logger.info("Ramping up")
             clients = min(clients + stride, max_locusts)
             return test(clients , stride, lower_bound, upper_bound)
@@ -209,4 +223,4 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
         locust_runner.start_hatching(start_count, hatch_rate)
     
     logger.info("RAMPING STARTED")
-    good_result = test(start_count, hatch_stride, 0, None)
+    test(start_count, hatch_stride, 0, None)

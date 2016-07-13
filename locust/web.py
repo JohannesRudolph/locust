@@ -13,6 +13,7 @@ from gevent import wsgi
 from flask import Flask, make_response, request, render_template
 
 from . import runners
+from . import ramping
 from .cache import memoize
 from .runners import MasterLocustRunner
 from locust.stats import median_from_dict
@@ -66,8 +67,6 @@ def swarm():
 
 @app.route("/ramp", methods=["POST"])
 def ramp():
-    from ramping import start_ramping
-    
     if (is_running()):
         return make_already_running_response()
 
@@ -82,7 +81,7 @@ def ramp():
     calibration_time = int(request.form["wait_time"])
     
     # ramping acts as a "controller" for locust and runs on its own thread
-    gevent.spawn(start_ramping, hatch_rate, max_clients, hatch_stride, percentile, response_time, fail_rate, precision, init_clients, calibration_time)
+    gevent.spawn(ramping.start_ramping, hatch_rate, max_clients, hatch_stride, percentile, response_time, fail_rate, precision, init_clients, calibration_time)
 
     response = make_response(json.dumps({'success':True, 'message': 'Ramping started'}))
     response.headers["Content-type"] = "application/json"
@@ -90,7 +89,15 @@ def ramp():
 
 @app.route('/state')
 def state():
-    response = make_response(json.dumps({'state': runners.locust_runner.state}))
+    # this is totally hacked, using globals all over the place
+    # but it gets the job done
+    model = {
+        'state': runners.locust_runner.state,
+        'ramps': ramping.ramp_index,
+        'error': ramping.ramp_error,
+        'result' : ramping.ramp_result
+    }
+    response = make_response(json.dumps(model))
     response.headers["Content-type"] = "application/json"
     return response
 
