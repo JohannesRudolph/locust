@@ -117,6 +117,7 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
     def ramp_stop():
         logger.info("RAMING STOPPED")
         locust_runner.stop()
+        statsd.gauge("locusts," + statsd_tags , 0)
         statsd.gauge("ramp," + statsd_tags, 0)
         return remove_listeners()
 
