@@ -74,6 +74,7 @@ def main():
     try:
         logger.info("Starting Locustctl %s" % version)
         logger.info("Starting web monitor at %s:%s" % (options.web_host or "*", options.port))
+        logger.info("Args for launching locust: %s"% (options.locust_args))
         main_greenlet = gevent.spawn(web.start, options)
         main_greenlet.join()
         code = 0
