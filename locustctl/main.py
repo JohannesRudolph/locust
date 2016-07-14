@@ -10,7 +10,6 @@ import socket
 from optparse import OptionParser
 
 from . import web
-from locust.log import setup_logging, console_logger
 
 version = locust.__version__
 
@@ -44,14 +43,6 @@ def parse_options():
         action="store_true",
         help="start multiple locusts workers (one per cpu core). Use this for spawning slaves")
     
-    # log level
-    parser.add_option('--loglevel', '-L',
-        action='store',
-        type='str',
-        dest='loglevel',
-        default='INFO',
-        help="Choose between DEBUG/INFO/WARNING/ERROR/CRITICAL. Default is INFO.",)
-    
     # Version number (optparse gives you --version but we have to do it
     # ourselves to get -V too.  sigh)
     parser.add_option('-V', '--version',
@@ -68,18 +59,14 @@ def parse_options():
 def main():
     parser, options, arguments = parse_options()
 
-    # setup logging
-    setup_logging(options.loglevel, None)
-    logger = logging.getLogger(__name__)
-    
     if options.show_version:
         print("Locustctl %s" % (version,))
         sys.exit(0)
    
     try:
-        logger.info("Starting Locustctl %s" % version)
-        logger.info("Starting web monitor at %s:%s" % (options.web_host or "*", options.port))
-        logger.info("Args for launching locust: %s"% (options.locust_args))
+        print("Starting Locustctl %s" % version)
+        print("Starting web monitor at %s:%s" % (options.web_host or "*", options.port))
+        print("Args for launching locust: %s"% (options.locust_args))
         main_greenlet = gevent.spawn(web.start, options)
         main_greenlet.join()
         code = 0

@@ -80,10 +80,10 @@ def boot():
             if s == "": # EOF, process exited
                 break
             else:
-                logger.info("#{0} {1}".format(i, s.strip()))
+                print("#{0} {1}".format(i, s.strip()))
 
     for i in xrange(locust_spawn):
-        logger.info("starting locust slave process #{0}".format(i))
+        print("starting locust slave process #{0}".format(i))
         process = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=os.getcwd(), env=locust_env)
         # starts a greenlet to read stdout from process
         poller = gevent.spawn(poll, process, i)
@@ -96,11 +96,11 @@ def stop():
     slaves = len(locust_processes)
     for i in xrange(slaves):
         (n, proc, poll) = locust_processes.pop()
-        logger.info("killing locust slave process #{0}".format(n))
+        print("killing locust slave process #{0}".format(n))
         try:
             proc.kill()
             poll.kill()
-            logger.info("locust process killed")
+            print("locust process killed")
         except:
              print "Unexpected error killing locust {0}: {1}".format(n, sys.exc_info())
              pass
@@ -115,7 +115,7 @@ def start(options):
     
     if (options.multiple):
         cores = multiprocessing.cpu_count()
-        logger.info("multiprocessing enabled, machine has {0} cpu cores".format(cores))
+        print("multiprocessing enabled, machine has {0} cpu cores".format(cores))
         locust_spawn = cores
     
     wsgi.WSGIServer((options.web_host, options.port), app, log=None).serve_forever()
