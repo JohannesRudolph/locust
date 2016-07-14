@@ -38,6 +38,11 @@ def parse_options():
         dest="locust_args",
         default="",
         help="command line args to pass to locust (not checked by locusctl!)")
+
+    parser.add_option('-m',
+        dest="multiple",
+        action="store_true",
+        help="start multiple locusts workers (one per cpu core). Use this for spawning slaves")
     
     # log level
     parser.add_option('--loglevel', '-L',

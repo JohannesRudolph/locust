@@ -5,6 +5,7 @@ import json
 import os
 import os.path
 import sys
+import multiprocessing
 
 from gevent import wsgi, subprocess
 from flask import Flask, Response, request
@@ -24,16 +25,15 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 if not os.path.exists('uploads'):
     os.makedirs('uploads')
 
-locust_process = None
-locust_process_poll = None
+locust_processes = list()
 locust_args = ""
+locust_spawn = 1
 
 @app.route('/boot', methods=["POST"])
 def boot():
-    global locust_process # we need write access to this variable
-    global locust_process_poll
+    global locust_processes # we need write access to this variable
 
-    if (locust_process != None):
+    if (len(locust_processes) > 0):
         return Response(json.dumps({'message': "Locust already running"}), status=400, mimetype='application/json')
 
     filename = 'locustfile.py'
@@ -74,41 +74,48 @@ def boot():
     locust_env = os.environ.copy()
     locust_env["STATSD_TAGS"] = tags
 
-    locust_process = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=os.getcwd(), env=locust_env)
-    # start a greenlet to read stdout from process
-    def poll():
+    def poll(process, i):
         while True:
-            s = locust_process.stdout.readline()
+            s = process.stdout.readline()
             if s == "": # EOF, process exited
                 break
             else:
-                logger.info(s.strip())
+                logger.info("#{0} {1}".format(i, s.strip()))
 
-    locust_process_poll = gevent.spawn(poll)
+    for i in xrange(locust_spawn):
+        logger.info("starting locust slave process #{0}".format(i))
+        process = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=os.getcwd(), env=locust_env)
+        # starts a greenlet to read stdout from process
+        poller = gevent.spawn(poll, process, i)
+        locust_processes.append((i, process, poller))
      
     return Response(json.dumps({'message': "Locust started"}), status = 200, mimetype = 'application/json')
 
 @app.route('/kill', methods=["POST"])
 def stop():
-    global locust_process # we need write access to this variable
-    global locust_process_poll
-
-    if (locust_process != None):
-        logger.info("killing locust process")
+    slaves = len(locust_processes)
+    for i in xrange(slaves):
+        (n, proc, poll) = locust_processes.pop()
+        logger.info("killing locust slave process #{0}".format(n))
         try:
-            locust_process.kill()
-            locust_process_poll.kill()
+            proc.kill()
+            poll.kill()
             logger.info("locust process killed")
         except:
-             print "Unexpected error killing locust:", sys.exc_info()[0]
+             print "Unexpected error killing locust {0}: {1}".format(n, sys.exc_info())
              pass
-        finally:
-            locust_process = None
-            locust_process_poll = None
 
     return Response(json.dumps({'message': "Locust has stopped"}), status=200, mimetype='application/json')
 
 def start(options):
     global locust_args
+    global locust_spawn
+
     locust_args = options.locust_args
+    
+    if (options.multiple):
+        cores = multiprocessing.cpu_count()
+        logger.info("multiprocessing enabled, machine has {0} cpu cores".format(cores))
+        locust_spawn = cores
+    
     wsgi.WSGIServer((options.web_host, options.port), app, log=None).serve_forever()
