@@ -108,8 +108,10 @@
                         <input type="text" name="hatch_stride" id="hatch_stride" class="val" value="50"/><br>
                         <label for="precision" title="Hatchstride will lower when a threshold has been reached and when hachstride <= precision; the sweet spot has been found">Precision (min value of hatch stride)</label>
                         <input type="text" name="precision" id="precision" class="val" value="10"/><br>
-                        <label for="wait_time" title="The amount of time to sleep to gather enough statistics before checking for thresholds">Calibration time (seconds)</label>
+                        <label for="wait_time" title="The time to collect statistics for each step">Calibration time (seconds)</label>
                         <input type="text" name="wait_time" id="wait_time" class="val" value="20" /><br>
+                        <label for="cooldown_time" title="The amount of time to wait between steps, if the thresholds were violated">Cooldown time (seconds)</label>
+                        <input type="text" name="cooldown_time" id="cooldown_time" class="val" value="5" /><br>
                         </div>
                         <div style="float:right;">
                         <label for="max_count" title="This is a threshold, if exceeded we start ramping down">Max number of clients</label>

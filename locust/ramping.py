@@ -102,7 +102,7 @@ def register_listeners():
     
 def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
           percent=0.95, response_time_limit=2000, acceptable_fail=0.05,
-          precision=200, start_count=0, calibration_time=15):
+          precision=200, start_count=0, calibration_time=15, cooldown_time=10):
     
     reset_results()
 
@@ -186,12 +186,17 @@ def start_ramping(hatch_rate=None, max_locusts=1000, hatch_stride=100,
             # half the stride
             stride = (stride / 2)
        
-    
         if step_failed:
-            logger.info("Ramping down")
             clients = clients - stride
             if (clients <= start_count):
                 return ramp_stop("Host can't support minimum number of users, check your ramp configuration, locustfile and \"--host\" address")
+
+            logger.info("Initiating cooldown of {0}s to clear congestion".format(cooldown_time))
+            ramp_set_locusts(0);
+            gevent.sleep(cooldown_time)
+
+            logger.info("Cooldown complete")
+            logger.info("Ramping down")
 
             return test(clients, stride, lower_bound, upper_bound)
         else:
