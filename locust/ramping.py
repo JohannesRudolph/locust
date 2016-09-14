@@ -81,7 +81,10 @@ def current_stats():
 
 def on_request_success_ramping(request_type, name, response_time, response_length):
     #statsd.incr("locust.requests");
-    statsd.timing("requests," + statsd_tags + ",type=" + request_type + ",name=" + name, response_time)
+    tags = statsd_tags + ",type=" + request_type + ",name=" + name
+    statsd.timing("responses," + tags, response_time) 
+    statsd.incr("responses.contentlength" + tags, response_length) 
+
     response_times.append(response_time)
        
 def on_report_to_master_ramping(client_id, data):
