@@ -83,7 +83,7 @@ def on_request_success_ramping(request_type, name, response_time, response_lengt
     #statsd.incr("locust.requests");
     tags = statsd_tags + ",type=" + request_type + ",name=" + name
     statsd.timing("responses," + tags, response_time) 
-    statsd.incr("responses.contentlength" + tags, response_length) 
+    statsd.incr("responses.contentlength," + tags, response_length) 
 
     response_times.append(response_time)
        
